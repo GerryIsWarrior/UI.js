@@ -11,23 +11,61 @@
  */
 (function(window,document,relyObj){
 
+    /*
+    *   内部使用一些快捷标识符
+    *       1. $ 代表全局注入的工具类
+    *       2. $1 代表注入的ajax类库
+    *       3. $2 代表模板处理类库
+    *
+    *
+    *
+    * */
+
+    var $ = relyObj.tool,$1 = relyObj.ajax,$2 = relyObj.template,that = this;
+
     var UI_global = {
+        //对所有参数进行处理
         config:function(configObject){
-            if(configObject){
-                throw new Error("请配置")
+            //将配置文件存数到数据存储池中
+            if(configObject === undefined){
+                throw new Error("请配置");
+            };
+            $.each(configObject.template,function(value,key){
+                if(value[1]){
+                    UI_global.container.loadContainer(key,configObject.baseUrl+value[0],function(data){
+                        $.html($.selector("body"),data);
+                        return;
+                    })
+                }
+            })
+
+        },
+        //容器核心处理库
+        container:{
+            //加载容器
+            loadContainer:function(name,url,success){
+                $1.get(url,"",success,function(e){
+                    throw new Error("请检查页面容器:"+name+"的.路径是否正确！");
+                });
             }
-        }
+        },
+        //组件核心处理库
+        component:{
+
+        },
+        //数据中转池核心处理库
+        DataPool:{
+            setData:function(){},
+            getData:function(){}
+        },
+        //组件中使用工具
     };
 
-    //该方法为了做一些预处理
-    var dealWithUI = function(){
+    (function(){
 
+        return window.UI  = UI_global;
 
-        return UI_global;
-
-    };
-
-    return new dealWithUI();
+    })(UI_global);
 })(window,document,(function(){
 
     //全局工具
@@ -48,7 +86,7 @@
         },
         //each循环
         each:function(obj,callback){
-            var keys = this.keys(obj)
+            var keys = tool_global.keys(obj)
             var i = 0, len = keys.length, key, item;
             while( i < len ){
                 key = keys[i++];
@@ -71,12 +109,33 @@
             }
             return target;
         },
+        //获取唯一的guid唯一标识
+        uuid:function(){
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
+                return v.toString(16);
+            });
+        },
+        //获取选择器
+        selector:function(selector){
+            return document.querySelectorAll(selector);
+        },
+        //插入页面
+        html:function(selector,tpl){
+            if(selector.length === 1){
+                selector[0].innerHTML = tpl;
+            }else{
+                tool_global.each(selector,function(node){
+                    node.innerHTML = tpl;
+                })
+            }
+        }
     };
 
     //ajax工具
     var ajax_global ={
         initParam:{
-            time:10000,                             //超时时间（单位：毫秒）
+            //time:10000,                             //超时时间（单位：毫秒）
             type:"",                                //请求类型（get、post...）
             url:"",                                 //请求接口
             data:"",                                //请求参数（格式：json对象）  例子：{"name":"gerry","age":"88"}
@@ -303,7 +362,10 @@
         //注入工具
         tool:{
             each:tool_global.each,
-            MergeObject:tool_global.MergeObject
+            MergeObject:tool_global.MergeObject,
+            uuid:tool_global.uuid,
+            selector:tool_global.selector,
+            html:tool_global.html
         },
         ajax:{
             common:ajax_global.common,

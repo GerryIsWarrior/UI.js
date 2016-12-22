@@ -1,11 +1,11 @@
 UI.config({
     //配置路径
-    baseUrl:"/",
+    baseUrl:"",
     //注入模块
     template:{
         //布局模板名称：模板地址+是否装载
-        "layout1":["layout/layout1.tpl",true],
-        "layout2":["layout/layout1.tpl",false]
+        "layout1":["app/demoPage1.tpl",true],
+        "layout2":["app/demoPage2.tpl",false]
     },
     //注入接口
     interface:{
@@ -16,10 +16,10 @@ UI.config({
         "interface5":"www.123.com/interface5",
     },
     //注入组件
-    module:{
+    component:{
         //组件名：组件地址+组件是否装载+接口注入
-        "md1":["module/header.mold",true,["interface1","interface2"]],
-        "md2":["module/body.mold",true,["interface1","interface2"]]
+        "menu":["module/header.mold",true,["interface1","interface2"]],
+        "header":["module/body.mold",true,["interface1","interface2"]]
     },
     //组件逻辑js
     data:{
