@@ -1,62 +1,194 @@
 /**
- * purpose：     ajax通用解决方案
+ * purpose：     ui.js框架设计
  * author：      仲强
  * version:      1.3
- * date:         2016-12-4
+ * date:         2016-12-29
  * email:        gerry.zhong@outlook.com
- * update:          --1.1 去除跨域请求头部设置   ==> author: keepfool (cnblogs)
- *                  --1.2 更新tool方法，完善结构  ==> author: pod4g  (github)
- *					--1.3 去除参数中的跨域设置，post方法已经支持跨域   ==>author: wYhooo  (github)
+ * update:          --1.1
  *
  */
 (function(window,document,relyObj){
 
     /*
     *   内部使用一些快捷标识符
-    *       1. $ 代表全局注入的工具类
+    *       0. _  代表dom操作
+    *       1. $  代表全局注入的工具类
     *       2. $1 代表注入的ajax类库
     *       3. $2 代表模板处理类库
-    *
+    *       4. $3 代表所有错误处理信息
     *
     *
     * */
 
-    var $ = relyObj.tool,$1 = relyObj.ajax,$2 = relyObj.template,that = this;
-
-    var UI_global = {
+    var _ = relyObj.dom,$ = relyObj.tool,$1 = relyObj.ajax,$2 = relyObj.template,$3 =relyObj.errMsg,that={},ui,UI_global;
+    ui = UI_global = {
         //对所有参数进行处理
         config:function(configObject){
-            //将配置文件存数到数据存储池中
+            //  1. 初始化数据池
+            ui.dataPool.initPool();
             if(configObject === undefined){
                 throw new Error("请配置");
             };
-            $.each(configObject.template,function(value,key){
-                if(value[1]){
-                    UI_global.container.loadContainer(key,configObject.baseUrl+value[0],function(data){
-                        $.html($.selector("body"),data);
+
+            //  2. 将配置文件存储到数据池中，做备用
+            ui.dataPool.setData_glo("config",configObject);
+
+            //  3. 检查加载页面容器，加载到body中
+            $.each(configObject.container,function(value,key){
+                if(value[1] === true){
+                    ui.container.loadContainer(key,configObject.baseUrl+value[0],function(data){
+                        _("body").html(data);
+                        ui.dataPool.setData_glo("private",{"pageConName":key});
                         return;
-                    })
+                    });
                 }
-            })
+            });
+
+            //  4. 处理配置容器和组件映射关系
+
+
+
 
         },
         //容器核心处理库
         container:{
             //加载容器
             loadContainer:function(name,url,success){
-                $1.get(url,"",success,function(e){
+                $1.get(url,"",function(data){
+                    data = ui.container.bindConRelation('ui-con',data)
+                    success(data);
+                },function(){
                     throw new Error("请检查页面容器:"+name+"的.路径是否正确！");
                 });
+            },
+            //绑定容器和组件关系
+            bindConRelation:function(name,tpl){
+                var reg = new RegExp('('+name+'="[0-9a-zA-Z_]+")', "g"),conValue={};
+                //取得页面初始化的所有组件信息
+                var resultArr = tpl.match(reg);
+                $.each(resultArr,function(value){
+                    //var initReg = new RegExp(value, "g"),uuid = $.uuid();
+                    //tpl = tpl.replace(initReg, value + ' uuid="'+uuid+'"');
+                    var uuid = $.uuid();
+                    var tempKey = ui.container.dealValue(value);
+                    conValue[tempKey] = uuid;
+                });
+                //将每个容器分配一个uuid，顺便存储对应所加载的组件
+                ui.dataPool.setData_glo("pageContainer",conValue);
+                return tpl;
+            },
+            //处理组件的值
+            dealValue:function(value){
+                return /".+"/.exec(value)[0].replace(/"/g,"");
             }
         },
         //组件核心处理库
         component:{
+            //加载组件
+            loadContainer:function(name,url,success){
+                $1.get(url,"",function(data){
+                    //每次加载完成组件，则在数据中转池生成一个该组件的数据
+                    success(data);
+                },function(e){
+                    throw new Error("请检查页面容器:"+name+"的.路径是否正确！");
+                });
+            }
 
         },
-        //数据中转池核心处理库
-        DataPool:{
-            setData:function(){},
-            getData:function(){}
+        /*
+        *   数据中转池核心处理库（以对象方式去存储，这样方便快捷的取数据）
+        *       数据格式：
+        *           1. mapping（name + uuid ）映射，每个name对应一个uuid  注：每加载一个页面容器生成一个uuid，每次加载一个组件，生成一个组件的uuid，尽量，按需创建和使用
+        *           2. pool（uuid + data ）映射，每个uuid对应储存一段数据
+        *               a. interface,注入接口信息
+        *               b. transfer，流转过来的数据
+        *           3. pageContainer，存储当前加载的页面中所有的页面容器
+        *           4. global_temp，全局存储的临时数据
+        *           5. config，存储用户配置的参数
+        *           6. private,存储UI.js本身处理过的数据，内部使用   (需要加载的组件)
+        *
+        * */
+        dataPool:{
+            //初始化数据池，将数据池都清空
+            initPool:function(){
+                that["dataCenter"]={
+                    mapping:{},                 //数据例子: "module":"ffb71d7f-995b-4898-8e4b-b283a4fe6253"
+                    pool:{},                    //数据例子："ffb71d7f-995b-4898-8e4b-b283a4fe6253":{索要存的对象}
+                    pageContainer:{},           //数据例子："name":"http://xxxxx.com"
+                    global_temp:{},             //数据例子："Test":"123321"      做全局缓存用
+                    config:{},                  //数据例子：值为config中的配置参数值
+                    private:{}                 //数据例子：内部使用参数，处理ui.js的内部流程
+                };
+            },
+            //检查是否为数据池全局拒绝修改的参数
+            checkParam_glo:function(name){
+                var data =["interface","config","private"],len = data.length;
+                while(len--> 0){
+                    if(name === data[len]){
+                        throw new Error($3.pool.forbidUpdate(name));
+                    }
+                }
+                return true;
+            },
+            //检查是否为组件拒绝修改的参数
+            checkParam_com:function(name){
+                var data =["interface"],len = data.length;
+                while(len--> 0){
+                    if(name === data[len]){
+                        throw new Error($3.pool.comErr(name));
+                    }
+                }
+                return true;
+            },
+            /*
+            *   数据池设置数据池全局的值（该方法为了固定数据池的参数，防止数据错乱）
+            *       name            数据池中需要设置的值的对象
+            *       value           存储进来的数据
+            *       isAdd           是否为数据池参数增加新的对象
+            * */
+            setData_glo:function(name,value,isNew){
+                //参数检查处理,检查是否为数据池禁止修改数据，初始化一些参数
+                //this.checkParam_glo(name);
+                isNew = $.is.Boolean(isNew) || false;
+
+                var temp = (new Function("name","dataCenter","return dataCenter."+name+";"))(name,that.dataCenter);
+                if (temp === undefined){
+                    if (!isNew) throw new Error($3.pool.addGloErr);
+                    //在全局数据池新增数据
+                    (new Function("name","value","dataCenter","dataCenter."+name+"=value;"))(name,value,that.dataCenter);
+                }else{
+                    $.MergeObject(temp,value);
+                }
+            },
+            /*
+             *   设置组件的值（该方法为了固定组件的参数，防止数据错乱）
+             *       uuid            唯一标识
+             *       name            数据池中需要设置的值的对象
+             *       value           存储进来的数据
+             *       isAdd           是否新增
+             * */
+            setData_com:function(uuid,name,value,isNew){
+                //参数检查处理,检查是否为组件禁止修改数据，初始化参数
+                this.checkParam_com(name);
+                isNew = $.is.Boolean(isNew) || false;
+
+                var temp = (new Function("uuid","name","dataCenter","return dataCenter.pool."+uuid+"."+name+";"))(uuid,name,that.dataCenter);
+                if (temp === undefined){
+                    if (!isNew) throw new Error($3.pool.addComErr);
+                    //在全局数据池新增数据
+                    (new Function("uuid","name","value","dataCenter","dataCenter.pool"+uuid+"."+name+"=value;"))(uuid,name,value,that.dataCenter);
+                }else{
+                    $.MergeObject(temp,value);
+                }
+
+            },
+            //获取全局对象的数据
+            getData_glo:function(name,key){
+
+            },
+            getData_com:function(name){
+
+            }
         },
         //组件中使用工具
     };
@@ -67,6 +199,30 @@
 
     })(UI_global);
 })(window,document,(function(){
+
+    //dom处理函数
+    function dom_global (selector){
+        var dom = function(selector){
+            this.selector = document.querySelectorAll(selector);
+        };
+        dom.prototype = {
+            //插入页面
+            html:function(tpl){
+                if(this.selector.length === 1){
+                    this.selector[0].innerHTML = tpl;
+                }else{
+                    tool_global.each(this.selector,function(node){
+                        node.innerHTML = tpl;
+                    })
+                }
+            },
+            //设置dom的属性和得到dom的属性
+            attr:function(name,value){
+
+            }
+        };
+        return new dom(selector);
+    };
 
     //全局工具
     var tool_global = {
@@ -109,6 +265,26 @@
             }
             return target;
         },
+        /*
+        *   检查类型 使用：is.类型（参数）
+        *       正确，return 传入值
+        *       错误, return false
+        * */
+        is:(function checkType(){
+            var is ={
+                types : ["Array", "Boolean", "Date", "Number", "Object", "RegExp", "String", "Window", "HTMLDocument"]
+            };
+            for(var i = 0, c; c = is.types[i ++ ]; ){
+                is[c] = (function(type){
+                    return function(obj){
+                        var temp = Object.prototype.toString.call(obj) == "[object " + type + "]";
+                        if (temp) temp = obj;
+                        return temp;
+                    }
+                })(c);
+            };
+            return is;
+        })(),
         //获取唯一的guid唯一标识
         uuid:function(){
             return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -116,20 +292,6 @@
                 return v.toString(16);
             });
         },
-        //获取选择器
-        selector:function(selector){
-            return document.querySelectorAll(selector);
-        },
-        //插入页面
-        html:function(selector,tpl){
-            if(selector.length === 1){
-                selector[0].innerHTML = tpl;
-            }else{
-                tool_global.each(selector,function(node){
-                    node.innerHTML = tpl;
-                })
-            }
-        }
     };
 
     //ajax工具
@@ -355,17 +517,29 @@
             code += 'return r.join("");';
             return new Function(code.replace(/[\r\t\n]/g, '')).apply(data);
         }
-    }
+    };
+
+    //错误信息
+    var errMsg_global = {
+        pool:{
+            forbidUpdate:function(param){ return "数据池参数："+param+"，禁止修改！" },
+            comErr:function(param){return "组件参数："+param+"，禁止修改！" },
+            addGloErr:"请确认是否为数据池中数据，如果你想拓展/新增数据，请将参数isNew设置为true。",
+            addComErr:"请确认是否为组件中的数据，如果你想拓展组件数据池数据，请将参数isNew设置为true。"
+        }
+
+
+    };
 
     //输出工具
     return {
+        dom:dom_global,
         //注入工具
         tool:{
             each:tool_global.each,
             MergeObject:tool_global.MergeObject,
             uuid:tool_global.uuid,
-            selector:tool_global.selector,
-            html:tool_global.html
+            is:tool_global.is
         },
         ajax:{
             common:ajax_global.common,
@@ -374,6 +548,7 @@
             postSync:ajax_global.postSync,
             longPolling:ajax_global.longPolling
         },
-        template:template_global.template
+        template:template_global.template,
+        errMsg:errMsg_global
     }
 })());
