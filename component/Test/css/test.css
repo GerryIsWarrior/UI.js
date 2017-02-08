@@ -1,0 +1,22 @@
+.testBg{
+    background-color: #FB9A00;
+    text-align: center;
+    color: white;
+    height: 33px;
+}
+.testImgLogo{
+    margin-top: 4px;
+    margin-right: 20px;
+}
+.testItem{
+    display: inline-block;
+    height: 100%;
+    line-height: 33px;
+    position: relative;
+    top: -10px;
+    margin: 0 15px;
+}
+.testUserOption{
+    font-size: 14px;
+    margin-left: 180px;
+}

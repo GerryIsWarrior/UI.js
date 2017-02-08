@@ -1,4 +1,4 @@
-UI.config({
+ui.config({
     //配置路径
     baseUrl:"",
     //注入模块
@@ -9,27 +9,32 @@ UI.config({
     },
     //注入接口
     interface:{
-        "interface1":"www.123.com/interface1",
+        "interface1":"www.123.com/interface1111111",
         "interface2":"www.123.com/interface2",
         "interface3":"www.123.com/interface3",
         "interface4":"www.123.com/interface4",
-        "interface5":"www.123.com/interface5",
+        "interface5":"www.123.com/interface555555555555",
     },
     //注入组件
     component:{
         //组件名：组件地址+组件是否装载+接口注入
-        "menu":["module/header.mold",true,["interface1","interface2"]],
-        "header":["module/body.mold",true,["interface1","interface2"]]
+        "test":["component/test/tpl/test.tpl","component/test/css/test.css","component/test/js/test.js",["interface1","interface2"],true],
+        "test1":["component/test1/tpl/test1.tpl","","component/test1/js/test1.js",["interface5","interface2"],true],
+        "test2":["component/test/tpl/test2.tpl","component/test/css/test.css","component/test/js/test.js",["interface1","interface2"],false],
+        "test3":["component/test/tpl/test3.tpl","component/test/css/test.css","component/test/js/test.js",["interface1","interface2"],false]
+
+
+
     },
     //容器组件映射关系   选择的容器名称:{"页面容器":"所加载的组件"}
     con_com:{
         layout1:{
             con1:"test",
-            con2:"test",
-            con3:"test",
-            con4:"test",
-            con5:"test",
-            con6:"test",
+            con2:"test1",
+            con3:"test2",
+            con4:"test3",
+            con5:"test4",
+            con6:"test5",
         },
         layout2:{
             con1:"test",

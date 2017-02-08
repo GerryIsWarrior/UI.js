@@ -20,7 +20,7 @@
     *
     * */
 
-    var _ = relyObj.dom,$ = relyObj.tool,$1 = relyObj.ajax,$2 = relyObj.template,$3 =relyObj.errMsg,that={},ui,UI_global;
+    var _ = relyObj.dom,$ = relyObj.tool,$1 = relyObj.ajax,$2 = relyObj.template,$3 =relyObj.errMsg,$4 =relyObj.htmlModule,that={},ui,UI_global;
     ui = UI_global = {
         //对所有参数进行处理
         config:function(configObject){
@@ -36,19 +36,40 @@
             //  3. 检查加载页面容器，加载到body中
             $.each(configObject.container,function(value,key){
                 if(value[1] === true){
-                    ui.container.loadContainer(key,configObject.baseUrl+value[0],function(data){
+                    ui.dataPool.setData_glo("private",{"pageConName":key});
+                    ui.container.loadContainer(key,value[0],function(data){
                         _("body").html(data);
-                        ui.dataPool.setData_glo("private",{"pageConName":key});
+                        dealWithCom();
                         return;
                     });
                 }
             });
 
-            //  4. 处理配置容器和组件映射关系
+            //处理组件方法
+            var dealWithCom = function(){
+                //  4. 处理配置容器和组件映射关系,取得所有容器所要加载组件的信息
+                var temp = ui.dataPool.getData_glo("private","pageConName");
+                //取得配置文件中关于当前容器中的容器-组件对应关系
+                var tempS = ui.dataPool.getData_glo("config","con_com",temp);
 
 
+                //  5. 判断组件是否存在，存在即加载组件
+                $.each(tempS,function(value,key){
+                    //判断组件是否配置
+                    var getComInfo = ui.component.isExist_com(value);
+                    if(getComInfo){
+                        if (getComInfo[4]){
+                            ui.component.loadComponent(value,getComInfo[0],function(x){console.log(console.log(x))});
+                        }else {
+                            var height =  _("[ui-con='"+key+"']").css("height");
+                            _("[ui-con='"+key+"']").html($4.loadErr("line-height:"+height));
+                        }
 
-
+                    }else {
+                        console.log($3.component.comConfig(value));
+                    }
+                });
+            };
         },
         //容器核心处理库
         container:{
@@ -64,7 +85,7 @@
             //绑定容器和组件关系
             bindConRelation:function(name,tpl){
                 var reg = new RegExp('('+name+'="[0-9a-zA-Z_]+")', "g"),conValue={};
-                //取得页面初始化的所有组件信息
+                //取得页面初始化的所有容器的信息
                 var resultArr = tpl.match(reg);
                 $.each(resultArr,function(value){
                     //var initReg = new RegExp(value, "g"),uuid = $.uuid();
@@ -85,15 +106,102 @@
         //组件核心处理库
         component:{
             //加载组件
-            loadContainer:function(name,url,success){
+            loadComponent:function(comName,url,callback){
+                //将回调函数存储起来，加载完毕组件，再进行回调
+                var tempCallback = {};tempCallback[comName] = callback;
+                ui.dataPool.setData_glo("private","comCallback",tempCallback);
                 $1.get(url,"",function(data){
-                    //每次加载完成组件，则在数据中转池生成一个该组件的数据
-                    success(data);
+                    var comInfo = ui.component.isBelonging(data),
+                        uuidCom = ui.dataPool.getData_glo("mapping","com",comInfo["com"]),
+                        temp={},
+                        conName,
+                        callback=function(value,key){
+                            if (value === comInfo["com"]) {
+                                conName = key;
+                                callback.isReturn = true;
+                            };
+                        };
+                    //获取容器和配置信息
+                    $.each(ui.dataPool.getData_glo("config","con_com",ui.dataPool.getData_glo("private","pageConName")),callback);
+                    //获取组件的配置信息
+                    var config = ui.dataPool.getData_glo("config","component",comInfo["com"]);
+                    if (uuidCom === undefined){  //如果不存在就创建
+                        uuidCom = $.uuid();
+                        temp[comInfo["com"]] = uuidCom;
+                        ui.dataPool.setData_glo("mapping",{"com":temp});
+                        temp = {};
+                        temp[uuidCom] = {"interface":config[3]};
+                        ui.dataPool.setData_glo("pool",temp);
+                    };
+                    _("[ui-con='"+conName+"']").html(comInfo.data);
+                    ui.component.loadComCss(config[1]);
+                    var comCallback = ui.dataPool.getData_glo("private","comCallback",comInfo["com"]);
+                    ui.component.loadComJs(config[2],uuidCom,comCallback);
                 },function(e){
-                    throw new Error("请检查页面容器:"+name+"的.路径是否正确！");
+                    throw new Error($3.component.comConfig(comName));
                 });
+            },
+            //判断组件是否存在
+            isExist_com:function(comName){
+                var data = ui.dataPool.getData_glo("config","component");
+                var temp = (new Function("data","return data."+comName))(data);
+                if (temp === undefined) {
+                    return false
+                }else{
+                    return temp;
+                };
+            },
+            //加载组件脚本，并注入组件所需要的数据
+            loadComJs:function(url,uuidCom,callback){
+                if (url === undefined || url === "") return;
+                var scriptDom = _.createTag("script",{"src":url,"uuid":uuidCom});
+                scriptDom.onload = scriptDom.onreadystatechange = function(){
+                    if(!this.readyState || this.readyState=='loaded' || this.readyState=='complete'){
+                        use.data = ui.component.getInfoFromPool(this.uuid);
+                        use(true);
+                        if (callback === undefined) return ;
+                            else callback(use.callObj);
+                    }
+                };
+                _("head").append(scriptDom);
+            },
+            //加载组件样式
+            loadComCss:function(url){
+                if (url === undefined || url === "") return;
+                var linkDom = _.createTag("link",{"type":"text/css","rel":"stylesheet ","href":url});
+                _("head").append(linkDom);
+            },
+            //处理组件回调，以及组件预执行function
+            reader:function(comObj){
+                use.callObj = comObj;
+                comObj.reader();
+            },
+            //从数据池中获取加载组件的信息并做处理
+            getInfoFromPool:function(uuidCom){
+                // 1. 从数据池中获取数据
+                var temp = ui.dataPool.getData_glo("pool",uuidCom);
+                // 2. 将数据池中数据进行转换处理
+                var interNameArr = temp.interface;
+                if (interNameArr !== undefined){
+                    var outputObj = {};
+                    $.each(interNameArr,function(value){
+                        outputObj[value] = ui.dataPool.getData_glo("config","interface",value);
+                    });
+                    temp.interface = outputObj;
+                };
+                return temp;
+            },
+            //处理组件模板回调，判断组件的归属
+            isBelonging:function(tpl){
+                var importTpl = tpl.match(/@import (.)+;/),outputObj={};
+                if (importTpl !== null){
+                    outputObj["com"] =importTpl[0].substring(8,importTpl[0].length-1);
+                    outputObj["data"] = tpl.substring(importTpl[0].length,tpl.length-1);
+                }else{
+                    console.log("请正确书写模板格式")
+                };
+                return outputObj;
             }
-
         },
         /*
         *   数据中转池核心处理库（以对象方式去存储，这样方便快捷的取数据）
@@ -130,72 +238,78 @@
                 }
                 return true;
             },
-            //检查是否为组件拒绝修改的参数
-            checkParam_com:function(name){
-                var data =["interface"],len = data.length;
-                while(len--> 0){
-                    if(name === data[len]){
-                        throw new Error($3.pool.comErr(name));
-                    }
-                }
-                return true;
-            },
             /*
             *   数据池设置数据池全局的值（该方法为了固定数据池的参数，防止数据错乱）
+            *       key1 key2 .... value isNew
             *       name            数据池中需要设置的值的对象
             *       value           存储进来的数据
             *       isAdd           是否为数据池参数增加新的对象
             * */
-            setData_glo:function(name,value,isNew){
+            setData_glo:function(){
                 //参数检查处理,检查是否为数据池禁止修改数据，初始化一些参数
                 //this.checkParam_glo(name);
-                isNew = $.is.Boolean(isNew) || false;
 
-                var temp = (new Function("name","dataCenter","return dataCenter."+name+";"))(name,that.dataCenter);
+                var arg = arguments,len = arg.length,funContent = "dataCenter.",temp;
+                if (len < 2) throw new Error("设置参数最少3位");
+
+                for (var i = 0;i<len-1;i++){
+                    if (i === len-2){
+                        funContent+=arg[i];
+                    }else{
+                        funContent+=(arg[i]+".");
+                    }
+                };
+                try {
+                    temp = (new Function("dataCenter","return "+funContent))(that.dataCenter);
+                } catch (e){
+                    temp = undefined;
+                };
                 if (temp === undefined){
-                    if (!isNew) throw new Error($3.pool.addGloErr);
                     //在全局数据池新增数据
-                    (new Function("name","value","dataCenter","dataCenter."+name+"=value;"))(name,value,that.dataCenter);
+                    (new Function("dataCenter","value",funContent+"=value"))(that.dataCenter,arg[len-1]);
                 }else{
-                    $.MergeObject(temp,value);
+                    $.MergeObject(temp,arg[len-1]);
                 }
             },
             /*
-             *   设置组件的值（该方法为了固定组件的参数，防止数据错乱）
-             *       uuid            唯一标识
-             *       name            数据池中需要设置的值的对象
-             *       value           存储进来的数据
-             *       isAdd           是否新增
-             * */
-            setData_com:function(uuid,name,value,isNew){
-                //参数检查处理,检查是否为组件禁止修改数据，初始化参数
-                this.checkParam_com(name);
-                isNew = $.is.Boolean(isNew) || false;
+            * 获取全局对象的数据
+            *   参数为： key1、key2、key3...
+            * */
+            getData_glo:function(){
+                var arg = Array.prototype.slice.call(arguments),len = arg.length,temp;
+                if (len === 0) return that.dataCenter;
 
-                var temp = (new Function("uuid","name","dataCenter","return dataCenter.pool."+uuid+"."+name+";"))(uuid,name,that.dataCenter);
-                if (temp === undefined){
-                    if (!isNew) throw new Error($3.pool.addComErr);
-                    //在全局数据池新增数据
-                    (new Function("uuid","name","value","dataCenter","dataCenter.pool"+uuid+"."+name+"=value;"))(uuid,name,value,that.dataCenter);
-                }else{
-                    $.MergeObject(temp,value);
-                }
-
-            },
-            //获取全局对象的数据
-            getData_glo:function(name,key){
-
-            },
-            getData_com:function(name){
-
+                var funCon = "return dataCenter.";
+                for (var i = 0;i<len;i++){
+                    if (i === len-1) {
+                        funCon += arg[i]
+                    }else{
+                        funCon += (arg[i]+".");
+                    };
+                };
+                //获得数据容错判断，如果报错即查无此数据
+                try {
+                    temp = (new Function("dataCenter",funCon))(that.dataCenter);
+                }catch (e){
+                    temp = undefined
+                };
+                return temp;
             }
         },
         //组件中使用工具
     };
 
     (function(){
-
-        return window.UI  = UI_global;
+        //定义组件js的加载方式
+        window.use = function(){
+            var arg = arguments;
+            if (arg[0] !== true){
+                this.temp = arg[0];
+            }else{
+                this.temp(use.data)
+            };
+        };
+        window.ui  = UI_global;
 
     })(UI_global);
 })(window,document,(function(){
@@ -219,9 +333,53 @@
             //设置dom的属性和得到dom的属性
             attr:function(name,value){
 
+            },
+            append:function(tag){
+                this.selector[0].appendChild(tag);
+            },
+            css:function(obj){
+                var selector = this.selector;
+                if(selector.length === 1){
+                    if (tool_global.is.String(obj)){
+                        return selector[0].style[obj];
+                    }else{
+                        tool_global.each(obj,function(value,key){
+                            selector[0].style[key] = value;
+                        });
+                    };
+                }else{
+                    tool_global.each(this.selector,function(node){
+                        tool_global.each(obj,function(value,key){
+                            node.style[key] = value;
+                        });
+                    });
+                }
             }
         };
         return new dom(selector);
+    };
+    //动态创建标签
+    dom_global.createTag = function(tagName,attrObj){
+        var tag = document.createElement(tagName);
+        tool_global.each(attrObj,function(value,key){
+            tag[key] = value;
+        });
+        return tag;
+    };
+    //加载css样式
+    dom_global.loadCss = function(url){
+        var linkDom = dom_global.createTag("link",{"type":"text/css","rel":"stylesheet ","href":url});
+        dom_global("head").append(linkDom);
+    };
+    //加载script脚本
+    dom_global.loadScript = function(url,comData,callback){
+        var scriptDom = dom_global.createTag("script",{"src":url});
+        scriptDom.onload = scriptDom.onreadystatechange = function(){
+            if(!this.readyState || this.readyState=='loaded' || this.readyState=='complete'){
+                callback();
+            }
+        };
+        dom_global("head").append(scriptDom);
     };
 
     //全局工具
@@ -247,7 +405,8 @@
             while( i < len ){
                 key = keys[i++];
                 item = obj[key];
-                callback.call(obj, item, key);
+                callback(item, key);
+                if (callback.isReturn) return;
             }
         },
         //合并对象,将第二个合并到第一个对象上
@@ -287,11 +446,12 @@
         })(),
         //获取唯一的guid唯一标识
         uuid:function(){
-            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            return 'ui'+'xxxxxxxxxxxx4xxxyxxxxxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
                 var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
                 return v.toString(16);
             });
         },
+        //动态创建标签
     };
 
     //ajax工具
@@ -526,10 +686,19 @@
             comErr:function(param){return "组件参数："+param+"，禁止修改！" },
             addGloErr:"请确认是否为数据池中数据，如果你想拓展/新增数据，请将参数isNew设置为true。",
             addComErr:"请确认是否为组件中的数据，如果你想拓展组件数据池数据，请将参数isNew设置为true。"
+        },
+        component:{
+            comConfig:function(param){ return "组件加载失败，请判断组件："+param+"是否正确配置！" },
         }
 
 
     };
+
+    var htmlModule =  {
+        loadErr:function(css){
+            return '<div style="text-align: center;color: white;background-color: black;opacity: 0.7;'+css+'">组件维护中...</div>';
+        }
+    }
 
     //输出工具
     return {
@@ -537,6 +706,7 @@
         //注入工具
         tool:{
             each:tool_global.each,
+            keys:tool_global.keys,
             MergeObject:tool_global.MergeObject,
             uuid:tool_global.uuid,
             is:tool_global.is
@@ -549,6 +719,7 @@
             longPolling:ajax_global.longPolling
         },
         template:template_global.template,
-        errMsg:errMsg_global
+        errMsg:errMsg_global,
+        htmlModule:htmlModule
     }
 })());
