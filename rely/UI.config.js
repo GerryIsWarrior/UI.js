@@ -1,6 +1,4 @@
 ui.config({
-    //配置路径
-    baseUrl:"",
     //注入模块
     container:{
         //布局模板名称：模板地址+是否装载(PS:如果都为true只会选择第一个模板容器)
@@ -19,9 +17,11 @@ ui.config({
     component:{
         //组件名：组件地址+组件是否装载+接口注入
         "test":["component/test/tpl/test.tpl","component/test/css/test.css","component/test/js/test.js",["interface1","interface2"],true],
-        "test1":["component/test1/tpl/test1.tpl","","component/test1/js/test1.js",["interface5","interface2"],true],
-        "test2":["component/test/tpl/test2.tpl","component/test/css/test.css","component/test/js/test.js",["interface1","interface2"],false],
-        "test3":["component/test/tpl/test3.tpl","component/test/css/test.css","component/test/js/test.js",["interface1","interface2"],false]
+        "test1":["component/test1/tpl/test1.tpl","component/test1/css/test1.css","component/test1/js/test1.js",["interface5","interface2"],true],
+        "test2":["component/test2/tpl/test2.tpl","component/test2/css/test2.css","component/test2/js/test2.js",["interface1","interface2"],true],
+        "test3":["component/test3/tpl/test3.tpl","component/test3/css/test3.css","component/test3/js/test3.js",["interface1","interface2"],true],
+        "test4":["component/test4/tpl/test4.tpl","component/test4/css/test4.css","component/test4/js/test4.js",["interface1","interface2"],true],
+        "test5":["component/test5/tpl/test5.tpl","component/test5/css/test5.css","component/test5/js/test5.js",["interface1","interface2"],true]
 
 
 

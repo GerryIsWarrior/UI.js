@@ -1,2 +1,2 @@
 @import test1;
-<img src="/UI.js/component/test1/img/showInfo.png"/>
+<img class="test1Img" src="/UI.js/component/test1/img/showInfo.png"/>

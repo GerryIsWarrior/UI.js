@@ -12,7 +12,6 @@ use(function(data,that){
         //reader为一些初始化需要的操作，有时候会有注册事件等，或者一些预操作
         reader:function(){
             that = this;
-            that.registerEle.click_testBtn();
         },
         //注入所有的选择器，方便选择器变化，直接修改该对象中的选择器，而不需要全局去更改
         selector:{
@@ -52,6 +51,6 @@ use(function(data,that){
             }
         }
     };
-    UI.component.javascriptCom(tempObj);
+    ui.component.reader(tempObj);
 });
 

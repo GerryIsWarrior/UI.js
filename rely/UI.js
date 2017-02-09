@@ -59,7 +59,7 @@
                     var getComInfo = ui.component.isExist_com(value);
                     if(getComInfo){
                         if (getComInfo[4]){
-                            ui.component.loadComponent(value,getComInfo[0],function(x){console.log(console.log(x))});
+                            ui.component.loadComponent(value,getComInfo[0]);
                         }else {
                             var height =  _("[ui-con='"+key+"']").css("height");
                             _("[ui-con='"+key+"']").html($4.loadErr("line-height:"+height));
@@ -86,7 +86,7 @@
             bindConRelation:function(name,tpl){
                 var reg = new RegExp('('+name+'="[0-9a-zA-Z_]+")', "g"),conValue={};
                 //取得页面初始化的所有容器的信息
-                var resultArr = tpl.match(reg);
+                var resultArr = Array.prototype.slice.call(tpl.match(reg));
                 $.each(resultArr,function(value){
                     //var initReg = new RegExp(value, "g"),uuid = $.uuid();
                     //tpl = tpl.replace(initReg, value + ' uuid="'+uuid+'"');
@@ -394,7 +394,7 @@
 
             var keys = [];
             for(var key in obj){
-                if(this.hasOwn(obj, key)) keys.push(key);
+                keys.push(key);
             };
             return keys
         },

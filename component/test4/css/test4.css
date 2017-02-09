@@ -1,0 +1,14 @@
+.test4line{
+    height: 1px;
+    background-color: #FB9A00;
+    margin-top: 10px;
+}
+.test4font{
+    text-align: center;
+    font-size: 12px;
+    color: #A5A5B1;
+}
+.test4span{
+    display: inline-block;
+    margin: 15px 15px;
+}

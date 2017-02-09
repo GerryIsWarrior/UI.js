@@ -1,5 +1,16 @@
-.testCss{
-    background-color: black;
-    text-align: center;
-    color: white;
+.test2Table{
+    width: 100%;
+    border:1px solid #E4E4E4;
+    margin-top: 10px;
+    border-bottom: 0;
+}
+.test2Table tr{
+    height: 40px;
+}
+.test2Table tr td{
+    border:none;
+    border-bottom:1px solid #E4E4E4;
+}
+.test2thead{
+    background: linear-gradient(#FBFBFB, #F5F5F5); /* 标准的语法 */
 }

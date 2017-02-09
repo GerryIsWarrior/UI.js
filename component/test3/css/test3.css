@@ -1,5 +1,31 @@
-.testCss{
-    background-color: black;
-    text-align: center;
-    color: white;
+.test3Css{
+    border-bottom: 3px solid #FB9A00;
+    height: 25px;
+    line-height: 25px;
+    font-size: 14px;
+    font-weight: bold;
+    display: inline-block;
+}
+.test3line{
+    height: 1px;
+    background-color: #bcb7be;
+    margin-top: -2px;
+}
+.test3ul{
+    padding: 0;
+    margin: 6px 0;
+    text-align: left;
+}
+.test3ul li{
+    list-style-type:none;
+    font-size: 13px;
+    margin-bottom: 6px;
+}
+.test3left{
+    width: 145px;
+    display: inline-block;
+}
+.test3right{
+    width: 55px;
+    display: inline-block;
 }
