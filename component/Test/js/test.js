@@ -3,7 +3,7 @@
  */
 use(function(data,that){
     var tempObj ={
-        //reader为一些初始化需要的操作，有时候会有注册事件等，或者一些预操作
+        //reader为一些初始化需要的操作，有时候会有注册事件等，或者一些预操作,加载完毕，会首先跑这个方法，这是一个入口
         reader:function(){
             that = this;
             that.firm.testLoad();

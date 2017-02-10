@@ -27,7 +27,7 @@
             //  1. 初始化数据池
             ui.dataPool.initPool();
             if(configObject === undefined){
-                throw new Error("请配置");
+                throw new Error($3.gloErr.noConfig);
             };
 
             //  2. 将配置文件存储到数据池中，做备用
@@ -79,7 +79,7 @@
                     data = ui.container.bindConRelation('ui-con',data)
                     success(data);
                 },function(){
-                    throw new Error("请检查页面容器:"+name+"的.路径是否正确！");
+                    throw new Error($3.container.loadError(name));
                 });
             },
             //绑定容器和组件关系
@@ -198,7 +198,7 @@
                     outputObj["com"] =importTpl[0].substring(8,importTpl[0].length-1);
                     outputObj["data"] = tpl.substring(importTpl[0].length,tpl.length-1);
                 }else{
-                    console.log("请正确书写模板格式")
+                    console.log($3.tpl.wrongFormat);
                 };
                 return outputObj;
             }
@@ -228,7 +228,7 @@
                     private:{}                 //数据例子：内部使用参数，处理ui.js的内部流程
                 };
             },
-            //检查是否为数据池全局拒绝修改的参数
+            //检查是否为数据池全局拒绝修改的参数 (待定)
             checkParam_glo:function(name){
                 var data =["interface","config","private"],len = data.length;
                 while(len--> 0){
@@ -248,9 +248,8 @@
             setData_glo:function(){
                 //参数检查处理,检查是否为数据池禁止修改数据，初始化一些参数
                 //this.checkParam_glo(name);
-
                 var arg = arguments,len = arg.length,funContent = "dataCenter.",temp;
-                if (len < 2) throw new Error("设置参数最少3位");
+                if (len < 2) throw new Error($3.pool.setValueErr);
 
                 for (var i = 0;i<len-1;i++){
                     if (i === len-2){
@@ -685,10 +684,20 @@
             forbidUpdate:function(param){ return "数据池参数："+param+"，禁止修改！" },
             comErr:function(param){return "组件参数："+param+"，禁止修改！" },
             addGloErr:"请确认是否为数据池中数据，如果你想拓展/新增数据，请将参数isNew设置为true。",
-            addComErr:"请确认是否为组件中的数据，如果你想拓展组件数据池数据，请将参数isNew设置为true。"
+            addComErr:"请确认是否为组件中的数据，如果你想拓展组件数据池数据，请将参数isNew设置为true。",
+            setValueErr:"设置池数组参数不正确，至少2位参数。"
         },
         component:{
             comConfig:function(param){ return "组件加载失败，请判断组件："+param+"是否正确配置！" },
+        },
+        container:{
+            loadError:function(name){"请检查页面容器:"+name+"的.路径是否正确！"}
+        },
+        tpl:{
+            wrongFormat:"请正确填写组件模板格式，@import + 当前组件的名称"
+        },
+        gloErr:{
+            noConfig:"请配置ui.config的数据。"
         }
 
 
