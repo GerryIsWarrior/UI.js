@@ -11,8 +11,8 @@ use(function(data,that){
     ui.component.reader({
         //reader为一些初始化需要的操作，有时候会有注册事件等，或者一些预操作
         reader:function(){
+            console.log("组件2执行....");
             that = this;
-            that.firm.testLoad();
         },
         //注入所有的选择器，方便选择器变化，直接修改该对象中的选择器，而不需要全局去更改
         selector:{
@@ -20,12 +20,6 @@ use(function(data,that){
         },
         //注入page中所有的事件，统一管理，建议命名规范：事件_命名，例 click_login
         registerEle:{
-            click_testBtn:function(){
-                //注册单击事件
-                document.querySelectorAll(that.selector.testBtn)[0].onclick = function(){
-                    that.firm.testLoad();
-                }
-            }
         },
         //注入所有ajax请求，页面所有请求，将在这里统一管理，建议命名规范：ajax_命名，例 ajax_login
         /*
@@ -47,9 +41,11 @@ use(function(data,that){
          *   因为上面所有的方法，只是做一件事，这边可以根据业务进行串服务，很简单的
          * */
         firm:{
-            testLoad:function(){
-                console.log("test1获取接口的值："+data.interface.interface5);
-            }
+        },
+        //订阅组件
+        subscribe_com:["test"],
+        subscribe_call:function(data){
+            console.log("组件2接受订阅消息为:"+data);
         }
     });
 });

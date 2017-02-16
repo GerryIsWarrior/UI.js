@@ -16,11 +16,12 @@
     *       2. $1 代表注入的ajax类库
     *       3. $2 代表模板处理类库
     *       4. $3 代表所有错误处理信息
-    *
+    *       5. $4 代表一些通用html模块
+    *       6. $5 代表订阅发布机制
     *
     * */
 
-    var _ = relyObj.dom,$ = relyObj.tool,$1 = relyObj.ajax,$2 = relyObj.template,$3 =relyObj.errMsg,$4 =relyObj.htmlModule,that={},ui,UI_global;
+    var _ = relyObj.dom,$ = relyObj.tool,$1 = relyObj.ajax,$2 = relyObj.template,$3 =relyObj.errMsg,$4 =relyObj.htmlModule,$5 =relyObj.publish,that={},ui,UI_global;
     ui = UI_global = {
         //对所有参数进行处理
         config:function(configObject){
@@ -51,24 +52,31 @@
                 var temp = ui.dataPool.getData_glo("private","pageConName");
                 //取得配置文件中关于当前容器中的容器-组件对应关系
                 var tempS = ui.dataPool.getData_glo("config","con_com",temp);
-
+                //记录组件的数量，为后期组件之间的流转数据做准备
+                ui.dataPool.setData_glo("private",{"comCount":0});
+                ui.dataPool.setData_glo("private",{"currCount":1});
 
                 //  5. 判断组件是否存在，存在即加载组件
                 $.each(tempS,function(value,key){
-                    //判断组件是否配置
                     var getComInfo = ui.component.isExist_com(value);
                     if(getComInfo){
                         if (getComInfo[4]){
+                            // 生成组件的发布者
+                            var temp ={};temp[value] = new $5;
+                            ui.dataPool.setData_glo("private","observer",temp);
+                            //该数据是需要推迟到组件加载完毕之后再发布消息，so 先存储
+                            ui.dataPool.setData_glo("private",{"delayPubArr":[]});
+
                             ui.component.loadComponent(value,getComInfo[0]);
                         }else {
                             var height =  _("[ui-con='"+key+"']").css("height");
                             _("[ui-con='"+key+"']").html($4.loadErr("line-height:"+height));
-                        }
-
+                        };
                     }else {
                         console.log($3.component.comConfig(value));
                     }
                 });
+
             };
         },
         //容器核心处理库
@@ -128,7 +136,7 @@
                     if (uuidCom === undefined){  //如果不存在就创建
                         uuidCom = $.uuid();
                         temp[comInfo["com"]] = uuidCom;
-                        ui.dataPool.setData_glo("mapping",{"com":temp});
+                        ui.dataPool.setData_glo("mapping","com",temp);
                         temp = {};
                         temp[uuidCom] = {"interface":config[3]};
                         ui.dataPool.setData_glo("pool",temp);
@@ -136,7 +144,7 @@
                     _("[ui-con='"+conName+"']").html(comInfo.data);
                     ui.component.loadComCss(config[1]);
                     var comCallback = ui.dataPool.getData_glo("private","comCallback",comInfo["com"]);
-                    ui.component.loadComJs(config[2],uuidCom,comCallback);
+                    ui.component.loadComJs(config[2],comInfo["com"],uuidCom,comCallback);
                 },function(e){
                     throw new Error($3.component.comConfig(comName));
                 });
@@ -152,13 +160,17 @@
                 };
             },
             //加载组件脚本，并注入组件所需要的数据
-            loadComJs:function(url,uuidCom,callback){
+            loadComJs:function(url,comName,uuidCom,callback){
                 if (url === undefined || url === "") return;
-                var scriptDom = _.createTag("script",{"src":url,"uuid":uuidCom});
+                var count = ui.dataPool.getData_glo("private","comCount")+1;  //获取当前组件加载的数量
+                ui.dataPool.setData_glo("private",{"comCount":count});  //统计加载的数量
+
+                var scriptDom = _.createTag("script",{"src":url,"uuid":uuidCom,"comName":comName});
                 scriptDom.onload = scriptDom.onreadystatechange = function(){
                     if(!this.readyState || this.readyState=='loaded' || this.readyState=='complete'){
-                        use.data = ui.component.getInfoFromPool(this.uuid);
+                        use.data = ui.component.getInfoFromPool(this.uuid,this.comName);   //获取自动注入参数
                         use(true);
+                        ui.component.delayPublish();   //推迟消息发布
                         if (callback === undefined) return ;
                             else callback(use.callObj);
                     }
@@ -173,13 +185,19 @@
             },
             //处理组件回调，以及组件预执行function
             reader:function(comObj){
-                use.callObj = comObj;
+                use.callObj = comObj;   //将对象塞给loadJs的callback中
                 comObj.reader();
+                //判断加载组件js是否订阅其他组件信息
+                if (comObj.subscribe_com !== undefined && comObj.subscribe_com.length !=0 ){
+                    ui.component.subscribeCom(comObj.subscribe_com,comObj.subscribe_call);
+                };
             },
             //从数据池中获取加载组件的信息并做处理
-            getInfoFromPool:function(uuidCom){
+            getInfoFromPool:function(uuidCom,comName){
                 // 1. 从数据池中获取数据
                 var temp = ui.dataPool.getData_glo("pool",uuidCom);
+                temp["uuid"] = uuidCom;
+                temp["comName"] = comName;
                 // 2. 将数据池中数据进行转换处理
                 var interNameArr = temp.interface;
                 if (interNameArr !== undefined){
@@ -201,7 +219,40 @@
                     console.log($3.tpl.wrongFormat);
                 };
                 return outputObj;
-            }
+            },
+            //组件发布消息
+            deliverCom:function(comName,content,isInit){
+                var whoPublisher = ui.dataPool.getData_glo("private","observer",comName);
+                //如果为初始化时候发布的消息，则推迟到组件加载完毕再发布
+                if (!isInit) {
+                    whoPublisher.deliver(content);
+                }else {
+                    //该数据需要推迟到组件加载完毕之后再发布消息，so 先存储
+                    ui.dataPool.getData_glo("private","delayPubArr").push([whoPublisher,content]);
+                };
+            },
+            //推迟消息发布，延迟到所有组件加载完毕
+            delayPublish:function(){
+                var comCount = ui.dataPool.getData_glo("private","comCount");
+                var currCount = ui.dataPool.getData_glo("private","currCount");
+                console.log("组件总数量："+comCount+"，当前加载组件："+currCount);
+                if ( currCount === comCount ){
+                    console.log("组件加载完毕！");
+                    var publishArr = ui.dataPool.getData_glo("private","delayPubArr");
+                    $.each(publishArr,function(value){
+                        value[0].deliver(value[1]);
+                    });
+                };
+                ui.dataPool.setData_glo("private",{"currCount":currCount+1});
+            },
+            //处理组件的订阅
+            subscribeCom:function(comNameArr,callback){
+                $.each(comNameArr,function(value){
+                    var whoPublisher = ui.dataPool.getData_glo("private","observer",value);
+                    callback.subscribe(whoPublisher);
+                });
+            },
+
         },
         /*
         *   数据中转池核心处理库（以对象方式去存储，这样方便快捷的取数据）
@@ -379,6 +430,36 @@
             }
         };
         dom_global("head").append(scriptDom);
+    };
+
+    //组件的数据流转技术（观察者模式）
+    function Publisher(){
+        this.subscribers = [];
+    };
+    //发布
+    Publisher.prototype.deliver = function(data){
+        this.subscribers.forEach(function(fn){fn(data);});
+        return this;
+    };
+    //订阅
+    Function.prototype.subscribe = function(publisher){
+        var that = this;
+        var alreadyExists = publisher.subscribers.some(function(el){
+            return el === that;
+        });
+
+        if (!alreadyExists){
+            publisher.subscribers.push(this);
+        };
+        return this;
+    };
+    //退订
+    Function.prototype.unsubscribe = function(publisher){
+        var that = this;
+        publisher.subscribers = publisher.subscribers.filter(function(el){
+            return el !== that
+        });
+        return this;
     };
 
     //全局工具
@@ -729,6 +810,7 @@
         },
         template:template_global.template,
         errMsg:errMsg_global,
-        htmlModule:htmlModule
+        htmlModule:htmlModule,
+        publish:Publisher
     }
 })());

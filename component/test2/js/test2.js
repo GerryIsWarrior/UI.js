@@ -12,6 +12,7 @@ use(function(data,that){
         //reader为一些初始化需要的操作，有时候会有注册事件等，或者一些预操作
         reader:function(){
             that = this;
+            console.log("组件3执行....");
         },
         //注入所有的选择器，方便选择器变化，直接修改该对象中的选择器，而不需要全局去更改
         selector:{
@@ -49,6 +50,11 @@ use(function(data,that){
             testLoad:function(){
                 alert("获取接口的值："+data.interface)
             }
+        },
+        //订阅组件
+        subscribe_com:["test"],
+        subscribe_call:function(data){
+            console.log("组件3接受订阅消息为:"+data);
         }
     };
     ui.component.reader(tempObj);
